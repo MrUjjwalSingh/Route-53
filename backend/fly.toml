@@ -1,0 +1,39 @@
+# Fly.io app configuration for the Route 53 clone backend.
+# Deploy with: fly launch --no-deploy (first time, to create the app) then
+# fly volumes create route53_data --size 1 && fly deploy
+#
+# The mounted volume is what makes the SQLite file survive redeploys — without
+# it, every `fly deploy` would start from an empty database.
+
+app = "route53-clone-backend"
+primary_region = "iad"
+
+[build]
+
+[env]
+  ENVIRONMENT = "production"
+  DATABASE_URL = "sqlite:////data/route53.db"
+  CORS_ORIGINS = "https://route53-clone.vercel.app"
+
+[[mounts]]
+  source = "route53_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/api/health"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
